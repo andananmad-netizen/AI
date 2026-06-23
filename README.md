@@ -14,3 +14,7 @@
 # githup
 git config --global user.name "andananmad-netizen"
 git config --global user.email "andanan.mad@gmail.com"
+
+
+# requirements
+add requirements
