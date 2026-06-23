@@ -17,10 +17,14 @@ with st.expander("📝 คลิกเพื่อดูโครงสร้า
     st.markdown("- **Temperature** (ถ้ามี): อุณหภูมิแผงเซลล์ (°C)")
 
 ##---------------------------------------------------------------------------------------------------------------##
+with st.sidebar:
+    st.sidebar.image("Logo-cnes.png", use_container_width=True) ##Logo CNES
+    st.markdown("---")
+    st.subheader("⚙️ ตั้งค่าพารามิเตอร์ระบบ")
+    system_mode = st.selectbox("เลือกโหมดการทำงาน", ["วิเคราะห์ภาพรวม", "คาดการณ์ประสิทธิภาพ", "รายงานความผิดปกติ"])
+    st.sidebar.markdown("<style>[data-testid='stSidebar'] {background-color: #003366;} [data-testid='stSidebar'] * {color: white !important;}</style>", unsafe_allow_html=True) ##สีพื้นหลังของ Sidebar
+    st.info(f"โหมดปัจจุบัน: {system_mode}")
 
-st.sidebar.image("Logo-cnes.png", use_container_width=True) ##Logo CNES
-st.sidebar.markdown("<style>[data-testid='stSidebar'] {background-color: #003366;} [data-testid='stSidebar'] * {color: white !important;}</style>", unsafe_allow_html=True) ##สีพื้นหลังของ Sidebar
-st.sidebar.header("⚙️ ตั้งค่าพารามิเตอร์ระบบ")
 
 ##---------------------------------------------------------------------------------------------------------------##
 
