@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "model.onnx"
+		},
+		{
+			"path": "labels.txt"
+		}
+	],
+	"settings": {}
+}

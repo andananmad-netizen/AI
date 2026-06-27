@@ -7,6 +7,8 @@
 # run code Office
 
 streamlit run main.py
+python -m streamlit run main.py
+
 
 .venv\Scripts\python.exe -m pip install streamlit (ติดตั้ง streamlit โดยรันผ่าน venv)
 
