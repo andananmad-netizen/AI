@@ -10,10 +10,50 @@ import io
 from datetime import datetime
 import uuid
 
-# ---------------- CONFIG ----------------
+# ---------------- ชื่อเว็บไซต์ + Icon ----------------
 st.set_page_config(page_title="Solar AI Heating Index", page_icon="☀️", layout="wide")
 
+# ================= SIDEBAR SOLAR THEME (NEW - SAFE ADD) =================
+st.markdown("""
+<style>
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0f172a, #1e3a8a, #0ea5e9);
+}
+
+[data-testid="stSidebar"] * {
+    color: white !important;
+}
+
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #fbbf24 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# -----------------ภาพพื้นหลัง-----------------------
+def bg(image):
+    if os.path.exists(image):
+        with open(image, "rb") as f:
+            img = base64.b64encode(f.read()).decode()
+
+        st.markdown(f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/png;base64,{img}");
+            background-size: cover;
+            background-position: center;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+
+bg("พื้นหลัง1.png")
+
+# -----------------ตัวแปรเป้าหมาย-----------------------
 target_pr = 75.0
+
+# -----------------ตัวแปรดาวน์โหลด Excel-----------------------
 history_file = "download_history.csv"
 
 # ---------------- SAFE LOAD HISTORY ----------------
@@ -21,15 +61,11 @@ def load_history():
     try:
         if os.path.exists(history_file) and os.path.getsize(history_file) > 0:
             df = pd.read_csv(history_file)
-
             if df.empty:
                 return []
-
             return df.to_dict("records")
-
         return []
-
-    except Exception:
+    except:
         return []
 
 # ---------------- SAFE SAVE HISTORY ----------------
@@ -47,14 +83,12 @@ def save_history(file_name, project_name):
 
     try:
         df = pd.DataFrame(st.session_state.download_history)
-
         if not df.empty:
             df.to_csv(history_file, index=False)
         else:
             if os.path.exists(history_file):
                 os.remove(history_file)
-
-    except Exception:
+    except:
         pass
 
 # ---------------- SESSION STATE ----------------
@@ -74,6 +108,43 @@ with st.sidebar:
 
     st.markdown("---")
     st.subheader("⚙️ ตั้งค่าพารามิเตอร์ระบบ")
+
+    # ✅ FIX CSS เฉพาะ sidebar (แยก label / input / dropdown)
+    st.markdown("""
+    <style>
+    /* พื้นหลัง sidebar */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f172a, #1e3a8a, #0ea5e9);
+    }
+
+    /* ข้อความทั่วไป sidebar */
+    section[data-testid="stSidebar"] * {
+        color: white !important;
+    }
+
+    /* ✅ label ของ selectbox (ให้เป็นสีขาว) */
+    section[data-testid="stSidebar"] label {
+        color: white !important;
+        font-weight: 600;
+    }
+
+    /* ✅ ตัว dropdown (ให้เป็นสีดำ) */
+    section[data-testid="stSidebar"] div[data-baseweb="select"] * {
+        color: black !important;
+    }
+
+    /* ช่อง input ใน dropdown */
+    section[data-testid="stSidebar"] input {
+        color: black !important;
+    }
+
+    /* dropdown กล่อง */
+    section[data-testid="stSidebar"] div[data-baseweb="select"] {
+        background-color: white;
+        border-radius: 6px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     system_mode = st.selectbox(
         "เลือกโหมดการทำงาน",
@@ -106,7 +177,6 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
             irr_col = col3.selectbox("Irradiance", df.columns)
             kwp_col = col4.selectbox("kWp", df.columns)
 
-            # ---------- ANALYSIS ----------
             if st.button("🚀 วิเคราะห์"):
 
                 actual_energy = pd.to_numeric(df[energy_col], errors="coerce").fillna(0).sum()
@@ -129,7 +199,6 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
                         "irr_col": irr_col
                     }
 
-            # ---------- RESULT ----------
             if st.session_state.analysis_done:
 
                 data = st.session_state.result_data
@@ -142,31 +211,23 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
                 k2.metric("Energy", f"{data['energy']:,.2f} kWh")
                 k3.metric("Irradiance", f"{data['irr']:,.2f}")
 
-                # ---------- GRAPH ----------
                 if len(data["df"]) > 1:
                     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-                    fig.add_trace(
-                        go.Bar(
-                            x=data["df"][data["date"]],
-                            y=data["df"][data["energy_col"]],
-                            name="Energy"
-                        ),
-                        secondary_y=False
-                    )
+                    fig.add_trace(go.Bar(
+                        x=data["df"][data["date"]],
+                        y=data["df"][data["energy_col"]],
+                        name="Energy"
+                    ), secondary_y=False)
 
-                    fig.add_trace(
-                        go.Scatter(
-                            x=data["df"][data["date"]],
-                            y=data["df"][data["irr_col"]],
-                            name="Irradiance"
-                        ),
-                        secondary_y=True
-                    )
+                    fig.add_trace(go.Scatter(
+                        x=data["df"][data["date"]],
+                        y=data["df"][data["irr_col"]],
+                        name="Irradiance"
+                    ), secondary_y=True)
 
                     st.plotly_chart(fig, use_container_width=True)
 
-                # ---------- DOWNLOAD ----------
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
                     data["df"].to_excel(writer, index=False)
@@ -174,7 +235,7 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
                 file_name = f"{project_name}_Analysis.xlsx"
 
                 st.download_button(
-                    label="📥 ดาวน์โหลด Excel",
+                    "📥 ดาวน์โหลด Excel",
                     data=output.getvalue(),
                     file_name=file_name,
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -237,34 +298,41 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
 
 # ---------------- AI MODE ----------------
 elif system_mode == "รายงานความผิดปกติ":
+
     st.title("📸 ระบบตรวจจับความผิดปกติแผงโซลาร์เซลล์ด้วย AI")
+
     MODEL_URL = "https://teachablemachine.withgoogle.com/models/T5Nn28B2A/"
-    html_code = f"""<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; text-align: center;">
-        <input type="file" id="image-selector" accept="image/*" style="margin-bottom: 20px;">
-        <img id="selected-image" style="max-width: 300px; display: none; margin: 0 auto; border-radius: 8px;">
-        <div id="label-container" style="margin-top: 20px; font-weight: bold; font-size: 20px;">กำลังโหลดโมเดล...</div>
+
+    html_code = f"""
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+        <input type="file" id="image-selector">
+        <img id="selected-image" style="max-width:300px;">
+        <div id="label-container">กำลังโหลด...</div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
     <script>
         const URL = "{MODEL_URL}";
         let model;
-        async function init() {{ try {{ model = await tmImage.load(URL + "model.json", URL + "metadata.json"); document.getElementById("label-container").innerHTML = "✨ โมเดลพร้อมใช้งาน!"; }} catch(e) {{ document.getElementById("label-container").innerHTML = "❌ โหลดโมเดลไม่สำเร็จ"; }} }}
-        document.getElementById('image-selector').addEventListener('change', function(e) {{
-            const reader = new FileReader();
-            reader.onload = function(event) {{
-                const img = document.getElementById('selected-image');
-                img.src = event.target.result;
-                img.style.display = "block";
+        async function init() {{
+            model = await tmImage.load(URL+"model.json", URL+"metadata.json");
+        }}
+        document.getElementById('image-selector').onchange = e => {{
+            let reader = new FileReader();
+            reader.onload = async () => {{
+                let img = document.getElementById('selected-image');
+                img.src = reader.result;
                 img.onload = async () => {{
-                    document.getElementById("label-container").innerHTML = "🔍 กำลังวิเคราะห์...";
-                    const prediction = await model.predict(img);
-                    let top = prediction.reduce((a, b) => a.probability > b.probability ? a : b);
-                    document.getElementById("label-container").innerHTML = "ผลสรุป: " + top.className + " (" + (top.probability * 100).toFixed(2) + "%)";
+                    let pred = await model.predict(img);
+                    let top = pred.reduce((a,b)=>a.probability>b.probability?a:b);
+                    document.getElementById("label-container").innerHTML =
+                        top.className + " " + (top.probability*100).toFixed(2)+"%";
                 }};
             }};
             reader.readAsDataURL(e.target.files[0]);
-        }});
+        }};
         init();
-    </script>"""
+    </script>
+    """
+
     components.html(html_code, height=500)
