@@ -5,6 +5,7 @@ import streamlit.components.v1 as components
 import plotly.express as px
 import base64
 import os
+import io
 
 # ตั้งค่าหน้าเว็บ
 st.set_page_config(page_title="Solar AI Heating Index", page_icon="☀️", layout="wide")
@@ -66,6 +67,7 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
             with col4: kwp_col = st.selectbox("คอลัมน์กำลังติดตั้ง (kWp)", df.columns)
                 
             if st.button("🚀 เริ่มวิเคราะห์และคำนวณค่า PR"):
+                # การคำนวณ
                 actual_energy = pd.to_numeric(df[energy_col], errors='coerce').fillna(0).sum()
                 total_irradiance = pd.to_numeric(df[irr_col], errors='coerce').fillna(0).sum()
                 kwp_val = pd.to_numeric(df[kwp_col], errors='coerce').mean()
@@ -82,22 +84,33 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
                     k2.metric("ผลิตไฟฟ้าจริง", f"{actual_energy:,.2f} kWh")
                     k3.metric("ค่าแสงสะสม", f"{total_irradiance:,.2f} kWh/m²")
                     
-                    st.markdown("### 🤖 บทวิเคราะห์จากระบบ")
-                    if pr_calculated >= target_pr: st.success("🟢 ระบบทำงานได้ดีเยี่ยม")
-                    elif pr_calculated >= 65: st.warning("🟡 ระบบทำงานอยู่ในเกณฑ์ยอมรับได้")
-                    else: st.error("🔴 ระบบทำงานต่ำกว่ามาตรฐาน")
-                    
+                    # กราฟ
                     if len(df) > 1:
                         st.subheader("📈 กราฟเปรียบเทียบแนวโน้ม")
                         fig = px.line(df, x=date_col, y=[energy_col, irr_col], title="Energy vs Irradiance")
                         fig.update_yaxes(matches=None)
                         st.plotly_chart(fig, use_container_width=True)
+
+                    # ปุ่มดาวน์โหลด (วางไว้หลังคำนวณเสร็จ)
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                        df.to_excel(writer, index=False, sheet_name='Report')
+                    st.download_button(
+                        label="📥 ดาวน์โหลดผลการวิเคราะห์เป็น Excel",
+                        data=output.getvalue(),
+                        file_name="Solar_Analysis_Report.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
                 else:
-                    st.error("❌ ค่า Irradiance ในคอลัมน์ที่เลือกไม่ถูกต้อง (ต้องเป็นตัวเลข)")
+                    st.error("❌ ค่า Irradiance ในคอลัมน์ที่เลือกไม่ถูกต้อง")
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาดในการประมวลผลไฟล์: {e}")
     else:
         st.info("💡 กรุณาอัพโหลดไฟล์ Excel ที่แถบด้านบน")
+
+
+
+
 
 elif system_mode == "รายงานความผิดปกติ":
     st.title("📸 ระบบตรวจจับความผิดปกติแผงโซลาร์เซลล์ด้วย AI")
