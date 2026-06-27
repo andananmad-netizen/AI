@@ -52,7 +52,7 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
 
     if uploaded_file is not None:
         try:
-            df = pd.read_excel(uploaded_file)
+            df = pd.read_excel(uploaded_file, header=1)
             st.success("✅ โหลดไฟล์ข้อมูลสำเร็จ!")
             
             with st.expander("📋 ดูตัวอย่างข้อมูล"):
