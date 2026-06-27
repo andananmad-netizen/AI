@@ -298,41 +298,34 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
 
 # ---------------- AI MODE ----------------
 elif system_mode == "รายงานความผิดปกติ":
-
     st.title("📸 ระบบตรวจจับความผิดปกติแผงโซลาร์เซลล์ด้วย AI")
-
     MODEL_URL = "https://teachablemachine.withgoogle.com/models/T5Nn28B2A/"
-
-    html_code = f"""
-    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
-        <input type="file" id="image-selector">
-        <img id="selected-image" style="max-width:300px;">
-        <div id="label-container">กำลังโหลด...</div>
+    html_code = f"""<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; text-align: center;">
+        <input type="file" id="image-selector" accept="image/*" style="margin-bottom: 20px;">
+        <img id="selected-image" style="max-width: 300px; display: none; margin: 0 auto; border-radius: 8px;">
+        <div id="label-container" style="margin-top: 20px; font-weight: bold; font-size: 20px;">กำลังโหลดโมเดล...</div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script>
         const URL = "{MODEL_URL}";
         let model;
-        async function init() {{
-            model = await tmImage.load(URL+"model.json", URL+"metadata.json");
-        }}
-        document.getElementById('image-selector').onchange = e => {{
-            let reader = new FileReader();
-            reader.onload = async () => {{
-                let img = document.getElementById('selected-image');
-                img.src = reader.result;
+        async function init() {{ try {{ model = await tmImage.load(URL + "model.json", URL + "metadata.json"); document.getElementById("label-container").innerHTML = "✨ โมเดลพร้อมใช้งาน!"; }} catch(e) {{ document.getElementById("label-container").innerHTML = "❌ โหลดโมเดลไม่สำเร็จ"; }} }}
+        document.getElementById('image-selector').addEventListener('change', function(e) {{
+            const reader = new FileReader();
+            reader.onload = function(event) {{
+                const img = document.getElementById('selected-image');
+                img.src = event.target.result;
+                img.style.display = "block";
                 img.onload = async () => {{
-                    let pred = await model.predict(img);
-                    let top = pred.reduce((a,b)=>a.probability>b.probability?a:b);
-                    document.getElementById("label-container").innerHTML =
-                        top.className + " " + (top.probability*100).toFixed(2)+"%";
+                    document.getElementById("label-container").innerHTML = "🔍 กำลังวิเคราะห์...";
+                    const prediction = await model.predict(img);
+                    let top = prediction.reduce((a, b) => a.probability > b.probability ? a : b);
+                    document.getElementById("label-container").innerHTML = "ผลสรุป: " + top.className + " (" + (top.probability * 100).toFixed(2) + "%)";
                 }};
             }};
             reader.readAsDataURL(e.target.files[0]);
-        }};
+        }});
         init();
-    </script>
-    """
-
+    </script>"""
     components.html(html_code, height=500)
