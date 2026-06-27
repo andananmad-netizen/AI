@@ -4,6 +4,7 @@ import numpy as np
 import streamlit.components.v1 as components
 import plotly.express as px
 import base64
+import os
 
 # ตั้งค่าหน้าเว็บ
 st.set_page_config(page_title="Solar AI Heating Index", page_icon="☀️", layout="wide")
@@ -24,20 +25,24 @@ st.sidebar.markdown(
 
 # Sidebar
 with st.sidebar:
-    st.image("Logo-cnes.png", use_container_width=True) 
+    if os.path.exists("Logo-cnes.png"):
+        st.image("Logo-cnes.png", use_container_width=True)
     st.markdown("---")
     st.subheader("⚙️ ตั้งค่าพารามิเตอร์ระบบ")
     system_mode = st.selectbox("เลือกโหมดการทำงาน", ["วิเคราะห์ภาพรวม", "คาดการณ์ประสิทธิภาพ", "รายงานความผิดปกติ"])
     target_pr = 75.0
     st.info(f"โหมดปัจจุบัน: {system_mode}")
 
+# --- ส่วนพื้นหลัง ---
+try:
+    if os.path.exists("พื้นหลัง1.png"):
+        with open("พื้นหลัง1.png", "rb") as f:
+            bg_base64 = base64.b64encode(f.read()).decode()
+        st.markdown(f"<style>.stApp {{ background-image: url('data:image/png;base64,{bg_base64}'); background-size: cover; background-attachment: fixed; }}</style>", unsafe_allow_html=True)
+except Exception:
+    pass
+
 # --- ส่วน Logic ของหน้าจอ ---
-with open("พื้นหลัง1.png", "rb") as f:
-     bg_base64 = base64.b64encode(f.read()).decode()
-st.markdown(f"<style>.stApp {{ background-image: url('data:image/png;base64,{bg_base64}'); background-size: cover; background-attachment: fixed; }}</style>", unsafe_allow_html=True)
-
-
-
 if system_mode in ["วิเคราะห์ภาพรวม", "คาดการณ์ประสิทธิภาพ"]:
     st.title("☀️ Solar AI Heating Index")
     st.markdown("## ระบบวิเคราะห์และประมวลผลประสิทธิภาพพลังงานแสงอาทิตย์")
@@ -49,9 +54,9 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
         try:
             df = pd.read_excel(uploaded_file)
             st.success("✅ โหลดไฟล์ข้อมูลสำเร็จ!")
-
-            st.subheader("📋 ตัวอย่างข้อมูลจากไฟล์ของคุณ")
-            st.dataframe(df.head(34), use_container_width=True)
+            
+            with st.expander("📋 ดูตัวอย่างข้อมูล"):
+                st.dataframe(df.head(10), use_container_width=True)
             
             st.subheader("🔍 จับคู่คอลัมน์สำหรับการคำนวณ")
             col1, col2, col3, col4 = st.columns(4)
@@ -82,26 +87,21 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
                     elif pr_calculated >= 65: st.warning("🟡 ระบบทำงานอยู่ในเกณฑ์ยอมรับได้")
                     else: st.error("🔴 ระบบทำงานต่ำกว่ามาตรฐาน")
                     
-                    # ใช้ Plotly เพื่อให้สเกลแยกกันและกราฟดูง่ายขึ้น
                     if len(df) > 1:
                         st.subheader("📈 กราฟเปรียบเทียบแนวโน้ม")
-                        fig = px.line(df, x=date_col, y=[energy_col, irr_col], 
-                                      title="Energy vs Irradiance",
-                                      labels={'value': 'Value', 'variable': 'Metrics'})
-                        # ปรับให้แกน Y อิสระต่อกัน (Secondary Y axis)
+                        fig = px.line(df, x=date_col, y=[energy_col, irr_col], title="Energy vs Irradiance")
                         fig.update_yaxes(matches=None)
                         st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.error("❌ ค่า Irradiance ไม่ถูกต้อง (ควรเป็นตัวเลขและมากกว่า 0)")
+                    st.error("❌ ค่า Irradiance ในคอลัมน์ที่เลือกไม่ถูกต้อง (ต้องเป็นตัวเลข)")
         except Exception as e:
-            st.error(f"เกิดข้อผิดพลาดในการอ่านไฟล์: {e}")
+            st.error(f"เกิดข้อผิดพลาดในการประมวลผลไฟล์: {e}")
     else:
         st.info("💡 กรุณาอัพโหลดไฟล์ Excel ที่แถบด้านบน")
 
-        
-
 elif system_mode == "รายงานความผิดปกติ":
     st.title("📸 ระบบตรวจจับความผิดปกติแผงโซลาร์เซลล์ด้วย AI")
+    # ส่วนของ HTML/JS คงเดิมไว้ได้เลยครับ...
     MODEL_URL = "https://teachablemachine.withgoogle.com/models/T5Nn28B2A/"
     
     html_code = f"""
