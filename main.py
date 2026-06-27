@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import streamlit.components.v1 as components
 import plotly.express as px
+import base64
 
 # ตั้งค่าหน้าเว็บ
 st.set_page_config(page_title="Solar AI Heating Index", page_icon="☀️", layout="wide")
@@ -31,6 +32,12 @@ with st.sidebar:
     st.info(f"โหมดปัจจุบัน: {system_mode}")
 
 # --- ส่วน Logic ของหน้าจอ ---
+with open("พื้นหลัง1.png", "rb") as f:
+     bg_base64 = base64.b64encode(f.read()).decode()
+st.markdown(f"<style>.stApp {{ background-image: url('data:image/png;base64,{bg_base64}'); background-size: cover; background-attachment: fixed; }}</style>", unsafe_allow_html=True)
+
+
+
 if system_mode in ["วิเคราะห์ภาพรวม", "คาดการณ์ประสิทธิภาพ"]:
     st.title("☀️ Solar AI Heating Index")
     st.markdown("## ระบบวิเคราะห์และประมวลผลประสิทธิภาพพลังงานแสงอาทิตย์")
