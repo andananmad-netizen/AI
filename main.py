@@ -12,25 +12,29 @@ import uuid
 
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Solar AI Heating Index", page_icon="☀️", layout="wide")
+
 target_pr = 75.0
 history_file = "download_history.csv"
 
-# ---------------- SESSION STATE ----------------
-if "download_history" not in st.session_state:
-    if os.path.exists(history_file):
-        df_hist = pd.read_csv(history_file)
-        st.session_state.download_history = df_hist.to_dict("records")
-    else:
-        st.session_state.download_history = []
+# ---------------- SAFE LOAD HISTORY ----------------
+def load_history():
+    try:
+        if os.path.exists(history_file) and os.path.getsize(history_file) > 0:
+            df = pd.read_csv(history_file)
 
-if "analysis_done" not in st.session_state:
-    st.session_state.analysis_done = False
+            if df.empty:
+                return []
 
-if "result_data" not in st.session_state:
-    st.session_state.result_data = {}
+            return df.to_dict("records")
 
-# ---------------- SAVE HISTORY FUNCTION ----------------
+        return []
+
+    except Exception:
+        return []
+
+# ---------------- SAFE SAVE HISTORY ----------------
 def save_history(file_name, project_name):
+
     new_record = {
         "id": str(uuid.uuid4()),
         "file": file_name,
@@ -41,7 +45,27 @@ def save_history(file_name, project_name):
     st.session_state.download_history.insert(0, new_record)
     st.session_state.download_history = st.session_state.download_history[:10]
 
-    pd.DataFrame(st.session_state.download_history).to_csv(history_file, index=False)
+    try:
+        df = pd.DataFrame(st.session_state.download_history)
+
+        if not df.empty:
+            df.to_csv(history_file, index=False)
+        else:
+            if os.path.exists(history_file):
+                os.remove(history_file)
+
+    except Exception:
+        pass
+
+# ---------------- SESSION STATE ----------------
+if "download_history" not in st.session_state:
+    st.session_state.download_history = load_history()
+
+if "analysis_done" not in st.session_state:
+    st.session_state.analysis_done = False
+
+if "result_data" not in st.session_state:
+    st.session_state.result_data = {}
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -84,12 +108,14 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
 
             # ---------- ANALYSIS ----------
             if st.button("🚀 วิเคราะห์"):
+
                 actual_energy = pd.to_numeric(df[energy_col], errors="coerce").fillna(0).sum()
                 total_irradiance = pd.to_numeric(df[irr_col], errors="coerce").fillna(0).sum()
                 kwp_val = pd.to_numeric(df[kwp_col], errors="coerce").mean()
                 kwp_final = kwp_val if kwp_val > 0 else 100.0
 
                 if total_irradiance > 0:
+
                     pr = (actual_energy / kwp_final / total_irradiance) * 100
 
                     st.session_state.analysis_done = True
@@ -119,21 +145,28 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
                 # ---------- GRAPH ----------
                 if len(data["df"]) > 1:
                     fig = make_subplots(specs=[[{"secondary_y": True}]])
-                    fig.add_trace(go.Bar(
-                        x=data["df"][data["date"]],
-                        y=data["df"][data["energy_col"]],
-                        name="Energy"
-                    ), secondary_y=False)
 
-                    fig.add_trace(go.Scatter(
-                        x=data["df"][data["date"]],
-                        y=data["df"][data["irr_col"]],
-                        name="Irradiance"
-                    ), secondary_y=True)
+                    fig.add_trace(
+                        go.Bar(
+                            x=data["df"][data["date"]],
+                            y=data["df"][data["energy_col"]],
+                            name="Energy"
+                        ),
+                        secondary_y=False
+                    )
+
+                    fig.add_trace(
+                        go.Scatter(
+                            x=data["df"][data["date"]],
+                            y=data["df"][data["irr_col"]],
+                            name="Irradiance"
+                        ),
+                        secondary_y=True
+                    )
 
                     st.plotly_chart(fig, use_container_width=True)
 
-                # ---------- DOWNLOAD (FIXED) ----------
+                # ---------- DOWNLOAD ----------
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
                     data["df"].to_excel(writer, index=False)
@@ -146,8 +179,8 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
                     file_name=file_name,
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     key=f"dl_{uuid.uuid4()}",
-                    on_click=save_history,              # ✅ สำคัญ
-                    args=(file_name, project_name)      # ส่งค่าไปฟังก์ชัน
+                    on_click=save_history,
+                    args=(file_name, project_name)
                 )
 
         except Exception as e:
@@ -192,7 +225,10 @@ if system_mode in ["วิเคราะห์ภาพรวม", "คาด�
                 st.write(f"✅ {item['time']} | {item['project']} | {item['file']}")
             with c2:
                 if st.button("❌", key=f"del_{item['id']}"):
-                    st.session_state.download_history.remove(item)
+                    st.session_state.download_history = [
+                        x for x in st.session_state.download_history
+                        if x["id"] != item["id"]
+                    ]
                     pd.DataFrame(st.session_state.download_history).to_csv(history_file, index=False)
                     st.rerun()
 
