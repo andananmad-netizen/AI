@@ -328,4 +328,4 @@ elif system_mode == "รายงานความผิดปกติ":
         }});
         init();
     </script>"""
-    components.html(html_code, height=500)
+    components.html(html_code, height=600)
